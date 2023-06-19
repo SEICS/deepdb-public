@@ -15,7 +15,7 @@ from ensemble_creation.rdc_based import candidate_evaluation
 from evaluation.confidence_interval_evaluation import evaluate_confidence_intervals
 from schemas.flights.schema import gen_flights_1B_schema
 from schemas.imdb.schema import gen_job_light_imdb_schema
-from schemas.ssb.schema import gen_500gb_ssb_schema
+from schemas.ssb.schema import gen_500gb_ssb_schema, gen_10gb_ssb_schema
 from schemas.tpc_ds.schema import gen_1t_tpc_ds_schema
 
 np.random.seed(1)
@@ -117,6 +117,8 @@ if __name__ == '__main__':
         schema = gen_job_light_imdb_schema(table_csv_path)
     elif args.dataset == 'ssb-500gb':
         schema = gen_500gb_ssb_schema(table_csv_path)
+    elif args.dataset == 'ssb-10gb':
+        schema = gen_10gb_ssb_schema(table_csv_path)
     elif args.dataset == 'flights1B':
         schema = gen_flights_1B_schema(table_csv_path)
     elif args.dataset == 'tpc-ds-1t':
