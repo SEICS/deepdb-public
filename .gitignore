@@ -135,3 +135,6 @@ bar.pdf
 optimized_inference.cpp
 compiled/
 .DS_Store
+
+# big files
+mqp-data/ssb-benchmark/10gb/gen_hdf
