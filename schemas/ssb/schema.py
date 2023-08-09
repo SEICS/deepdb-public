@@ -15,6 +15,19 @@ def gen_mini_ssb_schema(csv_path):
 
     return schema
 
+def gen_5gb_ssb_schema(csv_path):
+    schema = gen_500gb_ssb_schema(csv_path)
+    table_sizes = {'lineorder': 29999810,
+                   'dwdate': 2556,
+                   'part': 600000,
+                   'supplier': 10000,
+                   'customer': 150000}
+    schema.table_dictionary['lineorder'].sample_rate = 0.10
+    for table in schema.tables:
+        table.table_size = table_sizes[table.table_name]
+        schema.table_dictionary[table.table_name].table_size = table_sizes[table.table_name]
+
+    return schema
 
 def gen_10gb_ssb_schema(csv_path):
     schema = gen_500gb_ssb_schema(csv_path)
