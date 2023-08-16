@@ -1,6 +1,5 @@
 from ensemble_compilation.graph_representation import SchemaGraph, Table
 
-
 def gen_mini_ssb_schema(csv_path):
     schema = gen_500gb_ssb_schema(csv_path)
     table_sizes = {'lineorder': 500,
@@ -31,7 +30,7 @@ def gen_5gb_ssb_schema(csv_path):
 
 def gen_10gb_ssb_schema(csv_path):
     schema = gen_500gb_ssb_schema(csv_path)
-    table_sizes = {'lineorder': 59986214,
+    table_sizes = {'lineorder': 59986052,
                    'dwdate': 2556,
                    'part': 800000,
                    'supplier': 20000,
