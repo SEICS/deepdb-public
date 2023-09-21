@@ -1,0 +1,2 @@
+approach,query_no,latency,average_relative_error,bin_completeness,total_bins,query,sample_percentage
+ApproachType.MODEL_BASED,0,0.008922564000000577,99.999999999766,100,1,"select count(*) from lineorder, dwdate where lo_orderdate = d_datekey and d_year = 1993 and lo_discount>=1 and lo_discount<=3 and lo_quantity < 25;",100

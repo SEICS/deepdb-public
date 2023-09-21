@@ -87,6 +87,7 @@ def create_custom_leaf(data, ds_context, scope):
         if hasattr(ds_context, 'no_compression_scopes') and idx not in ds_context.no_compression_scopes and \
                 len(unique_vals) > MAX_UNIQUE_LEAF_VALUES:
             # if there are too many unique values build identity leaf with histogram representatives
+            print(f"Number of bins: {MAX_UNIQUE_LEAF_VALUES}")
             hist, bin_edges = np.histogram(data[:, 0], bins=MAX_UNIQUE_LEAF_VALUES, density=False)
             logger.debug(f"\t\tDue to histograms leaf size was reduced "
                          f"by {(1 - float(MAX_UNIQUE_LEAF_VALUES) / len(unique_vals)) * 100:.2f}%")
@@ -99,7 +100,7 @@ def create_custom_leaf(data, ds_context, scope):
         else:
             probs = np.array(counts, np.float64) / len(data[:, 0])
             lidx = len(probs) - 1
-
+        
         # cumulative sum to make inference faster
         prob_sum = np.concatenate([[0], np.cumsum(probs)])
 

@@ -5,6 +5,7 @@ from random import randint
 from time import perf_counter
 
 import networkx as nx
+import matplotlib.pyplot as plt
 import numpy as np
 from spn.algorithms.splitting.RDC import rdc_cca, rdc_transformer
 from spn.structure.Base import Context
@@ -46,6 +47,7 @@ def generate_candidate_solution(pairwise_max_rdc, table_index_dict, prep, max_bu
     rejected_candidates = 0
     while rejected_candidates < 5:
         no_joins = randint(2, max_no_relationships)
+        # logger.debug(f"Number of join: {no_joins}.")
         relationship_list, merged_tables = create_random_join(schema, no_joins)
         current_costs = learning_cost(prep, [relationship_list])
 
@@ -100,23 +102,34 @@ def candidate_rdc_sum_means(pairwise_max_rdc, table_index_dict, ensemble_candida
 
 def candidate_evaluation(schema, meta_data_path, sample_size, spn_sample_size, max_table_data, ensemble_path,
                          physical_db_name, postsampling_factor, ensemble_budget_factor, max_no_joins, rdc_learn,
-                         pairwise_rdc_path, rdc_threshold=0.15, random_solutions=10000, bloom_filters=False,
-                         incremental_learning_rate=0, incremental_condition=None):
+                         pairwise_rdc_path, rdc_threshold=0.05, random_solutions=10000, bloom_filters=False,
+                         incremental_learning_rate=0, incremental_condition=None): # original DeepDB's threshold is 0.15 but jw changed to 0.05
 
     assert incremental_learning_rate==0 or incremental_condition is None
-    prep = JoinDataPreparator(meta_data_path + "/meta_data_sampled.pkl", schema, max_table_data=max_table_data)
-
+    # -------- hardcoded (DeepDB's IMDB code) ------------------------------------------------------------------
+    # prep = JoinDataPreparator(meta_data_path + "/meta_data_sampled.pkl", schema, max_table_data=max_table_data)
+    # -------- hardcoded (For SSB rdc-based training) ----------------------------------------------------------
+    prep = JoinDataPreparator(meta_data_path + "/meta_data.pkl", schema, max_table_data=max_table_data)
+    # ----------------------------------------------------------------------------------------------------------
+    print(f"rdc_threshold: {rdc_threshold}")
     # build graph from schema
     table_index_dict = {table.table_name: i for i, table in enumerate(schema.tables)}
     inverse_table_index_dict = {table_index_dict[k]: k for k in table_index_dict.keys()}
     G = nx.Graph()
+    # print(f"schema.relationships.start :{[rel.start for rel in schema.relationships]}")
+    # print(f"schema.relationships.end :{[rel.end for rel in schema.relationships]}")
     for relationship in schema.relationships:
         start_idx = table_index_dict[relationship.start]
         end_idx = table_index_dict[relationship.end]
         G.add_edge(start_idx, end_idx, relationship=relationship)
 
+    # nx.draw(G)
+    # plt.savefig("join_pairs.png", with_labels=True)
+
     # iterate over pairs
     all_pairs = dict(nx.all_pairs_shortest_path(G))
+    print(f"table_index_dict:{table_index_dict}")
+    print(f"all_pairs: {all_pairs}")
     all_pair_list = []
     for left_idx, right_idx_dict in all_pairs.items():
         for right_idx, shortest_path_list in right_idx_dict.items():
@@ -161,8 +174,7 @@ def candidate_evaluation(schema, meta_data_path, sample_size, spn_sample_size, m
 
     # generate random candidates
     ensemble_candidates = set([generate_candidate_solution(pairwise_max_rdc, table_index_dict, prep, budget, schema,
-                                                           max_no_joins, rdc_threshold) for i in
-                               range(random_solutions)])
+                                                           max_no_joins, rdc_threshold) for i in range(random_solutions)])
 
     candidates = [(ensemble_candidate[0], ensemble_candidate[1],
                    candidate_rdc_sum_means(pairwise_max_rdc, table_index_dict, ensemble_candidate[0])) for
@@ -173,6 +185,7 @@ def candidate_evaluation(schema, meta_data_path, sample_size, spn_sample_size, m
 
     # learn large joins first
     optimal_candidate.sort(key=lambda x: -len(x[1]))
+    print(f"optimal_candidate: {optimal_candidate}")
     logger.info(f"Computed optimal solution out of {random_solutions} candidates "
                 f"in {perf_counter() - eval_start_t} secs")
     for _, merged_tables in optimal_candidate:
@@ -354,4 +367,5 @@ def max_rdc(schema, left_table, right_table, df_samples, meta_types, rdc_attribu
         rdc_attribute_dict[(column_left, column_right)] = rdc
         rdc_attribute_dict[(column_right, column_left)] = rdc
 
+    print(f"rdc_vals: {rdc_vals}")
     return max(rdc_vals)

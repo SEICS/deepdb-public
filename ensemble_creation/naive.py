@@ -78,7 +78,8 @@ def naive_every_relationship_ensemble(schema, hdf_path, sample_size, ensemble_pa
                          column_names=list(df_samples.columns), table_meta_data=prep.table_meta_data)
         min_instance_slice = RATIO_MIN_INSTANCE_SLICE * min(sample_size, len(df_samples))
         logger.debug(f"Using min_instance_slice parameter {min_instance_slice}.")
-        logger.info(f"SPN training phase with {len(df_samples)} samples")
+        logger.info(f"SPN training phase with {len(df_samples)} samples.")
+        logger.info(f"min_instance_slice: {min_instance_slice}.")
         aqp_spn.learn(df_samples.values, min_instances_slice=min_instance_slice, bloom_filters=bloom_filters,
                       rdc_threshold=rdc_threshold)
         if incremental_learning_rate > 0:

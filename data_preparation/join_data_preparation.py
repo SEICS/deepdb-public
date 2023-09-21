@@ -658,7 +658,17 @@ def prepare_sample_hdf(schema, hdf_path, max_table_data, sample_size):
                     df_samples = df_sample_cache[relationship_obj.start]
                     df_samples = df_samples.set_index(right_attribute, drop=False)
                     next_table_data = next_table_data.set_index(left_attribute, drop=False)
+                    
+                    # --- original DeepDB's code (generating error for rdc-based SSB training) -----
+                    
+                    print(f"right_attribute: {right_attribute}")
+                    print(f"next_table_data: {next_table_data}")
+                    print(f"df_samples: {df_samples}")
                     next_table_data = df_samples.merge(next_table_data, right_index=True, left_on=right_attribute)
+                    # ------------------------------below changed by jw ----------------------------
+                    # next_table_data = df_samples.merge(next_table_data, right_index=True, left_on=right_attribute)
+                    # ------------------------------------------------------------------------------
+                    
                     # only keep rows with join partner
                     next_table_data = next_table_data[
                         next_table_data[relationship_obj.end + '.' + relationship_obj.multiplier_attribute_name] > 0]

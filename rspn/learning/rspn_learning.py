@@ -110,6 +110,7 @@ def create_custom_leaf(data, ds_context, scope):
         for i, x in enumerate(unique):
             sorted_counts[int(x)] = counts[i]
         p = sorted_counts / data.shape[0]
+        logger.debug(f"discrete attribute trained with {len(sorted_counts)} bins (i.e., len(sorted_counts), with data.shape[0] = {data.shape[0]}")
         null_value = ds_context.null_values[idx]
         node = Categorical(p, null_value, scope, cardinality=data.shape[0])
 
