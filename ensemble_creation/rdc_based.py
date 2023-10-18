@@ -256,6 +256,7 @@ def candidate_evaluation(schema, meta_data_path, sample_size, spn_sample_size, m
             cardinality_true = full_join_est
 
         # learn spn
+        logger.debug(f"meta types: {meta_types}.")
         if len(relationship_list) > 0:
             aqp_spn = AQPSPN(meta_types, null_values, cardinality_true, schema,
                              list(relationship_list), full_sample_size=len(df_samples),

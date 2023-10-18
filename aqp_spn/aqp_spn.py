@@ -170,6 +170,9 @@ class AQPSPN(CombineSPN, RSPN):
             else:
                 std_values = std_values.reshape(len(group_by_tuples), 1)
 
+        print(f"standard_deviations: {standard_deviations}")
+        print(f"std_values: {std_values}")
+        print(f"exp_values: {exp_values}")
         return std_values, postprocess_exps(expectation, exp_values)
 
     def evaluate_indicator_expectation_batch(self, indicator_expectation, group_bys, group_by_tuples,

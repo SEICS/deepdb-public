@@ -10,8 +10,7 @@ from aqp_spn.aqp_leaves import Categorical
 from aqp_spn.aqp_leaves import IdentityNumericLeaf
 
 logger = logging.getLogger(__name__)
-MAX_UNIQUE_LEAF_VALUES = 10000
-
+MAX_UNIQUE_LEAF_VALUES = 3000 # DeepDB's original value: 10000, change to make fair comparison with BayesAQP
 
 def learn_mspn(
         data,
@@ -100,7 +99,7 @@ def create_custom_leaf(data, ds_context, scope):
         else:
             probs = np.array(counts, np.float64) / len(data[:, 0])
             lidx = len(probs) - 1
-        
+
         # cumulative sum to make inference faster
         prob_sum = np.concatenate([[0], np.cumsum(probs)])
 

@@ -279,6 +279,9 @@ def learn_structure(
 
         elif operation == Operation.CREATE_LEAF:
             leaf_start_t = perf_counter()
+            logger.debug(f"scope to create leaf: {scope}.")
+            logger.debug(f"local_data to create leaf: {local_data}")
+            logger.debug(f"ds_context to create leaf: {ds_context}")
             node = create_leaf(local_data, ds_context, scope)
             parent.children[children_pos] = node
             leaf_end_t = perf_counter()

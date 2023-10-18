@@ -9,7 +9,7 @@ from spn.structure.StatisticalTypes import MetaType
 from rspn.structure.leaves import IdentityNumericLeaf, Categorical
 
 logger = logging.getLogger(__name__)
-MAX_UNIQUE_LEAF_VALUES = 10000
+MAX_UNIQUE_LEAF_VALUES = 3000 # DeepDB's original value: 10000, change to make fair comparison with BayesAQP
 
 
 def learn_mspn(
@@ -96,6 +96,8 @@ def create_custom_leaf(data, ds_context, scope):
         else:
             probs = np.array(counts, np.float64) / len(data[:, 0])
             lidx = len(probs) - 1
+            
+        logger.debug(f"Real attribute trained wth {len(probs)} bins (i.e., len(probs)).")
 
         null_value = ds_context.null_values[idx]
         leaf = IdentityNumericLeaf(unique_vals, probs, null_value, scope, cardinality=data.shape[0])
@@ -110,7 +112,8 @@ def create_custom_leaf(data, ds_context, scope):
         for i, x in enumerate(unique):
             sorted_counts[int(x)] = counts[i]
         p = sorted_counts / data.shape[0]
-        logger.debug(f"discrete attribute trained with {len(sorted_counts)} bins (i.e., len(sorted_counts), with data.shape[0] = {data.shape[0]}")
+        logger.debug(f"p = sorted_counts / data.shape[0] = {p}")
+        logger.debug(f"discrete attribute trained with {len(p)} bins (i.e., len(p)) with data.shape[0] = {data.shape[0]}")
         null_value = ds_context.null_values[idx]
         node = Categorical(p, null_value, scope, cardinality=data.shape[0])
 

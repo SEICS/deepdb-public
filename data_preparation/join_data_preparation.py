@@ -3,6 +3,7 @@ import logging
 import math
 import pickle
 import random
+import sys
 
 import pandas as pd
 from spn.structure.StatisticalTypes import MetaType
@@ -297,7 +298,9 @@ class JoinDataPreparator:
                                                                              min_start_table_size=min_start_table_size,
                                                                              sample_rate=sample_rate,
                                                                              drop_redundant_columns=drop_redundant_columns)
-
+        
+        logger.debug(f"join_data_preparation meta_types: {meta_types}")
+        
         if len(df_full_samples) > sample_size:
             df_full_samples = df_full_samples.sample(sample_size)
 

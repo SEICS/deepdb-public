@@ -105,8 +105,11 @@ class RSPN:
 
         # build domains (including the dependence analysis)
         domain_start_t = time.perf_counter()
+        logger.debug(f"self.meta_types or attr_types: {self.meta_types}")
+        logger.debug(f"column meta types: {list(zip(self.column_names,self.meta_types))}.")
         ds_context = build_ds_context(self.column_names, self.meta_types, self.null_values, self.table_meta_data,
                                       no_compression_scopes, train_data)
+        
         self.ds_context = ds_context
         domain_end_t = time.perf_counter()
         logging.debug(f"Built domains in {domain_end_t - domain_start_t} sec")
@@ -355,4 +358,8 @@ class RSPN:
         denominator = self._indicator_expectation(normalizing_scope,
                                                   inverted_features=inverted_features_of_norm,
                                                   range_conditions=range_conditions)
+        
+        print(f"std: {std}")
+        print(f"nominator: {nominator}")
+        print(f"denominator: {denominator}")
         return std, nominator / denominator

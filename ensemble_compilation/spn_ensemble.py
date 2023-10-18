@@ -748,6 +748,7 @@ class SPNEnsemble:
                 logger.debug(f"\t\tcomputed {len(result_tuples)} group by statements "
                              f"in {group_by_end_t - group_by_start_t} secs.")
 
+        print(f"query.query_type == QueryType.CARDINALITY or any([aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT for _, aggregation_type, _ in query.aggregation_operations]): {query.query_type == QueryType.CARDINALITY or any([aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT for _, aggregation_type, _ in query.aggregation_operations])}")
         # if cardinality query simply return it
         if query.query_type == QueryType.CARDINALITY or any(
                 [aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT
@@ -772,6 +773,8 @@ class SPNEnsemble:
                                                                         exploit_overlapping=exploit_overlapping,
                                                                         return_factor_values=True,
                                                                         exploit_incoming_multipliers=exploit_incoming_multipliers)
+            
+           
             prot_card_end_t = perf_counter()
             if debug:
                 if len(query.group_bys) == 0:
@@ -869,6 +872,8 @@ class SPNEnsemble:
                     exp_start_t = perf_counter()
                     # todo. incorporate rdc values
                     expectation_spn, expectation = self._greedily_select_expectation_spn(query, factors)
+                    print(f"expectation_spn: {expectation_spn}")
+                    print(f"expectation: {expectation}")
                     if confidence_intervals:
                         current_stds, aggregation_result = expectation_spn.evaluate_expectation_batch(
                             expectation,
@@ -878,6 +883,7 @@ class SPNEnsemble:
                         avg_stds = np.sqrt(np.square(avg_stds) + np.square(current_stds))
 
                     else:
+                        print(f"result_tuples before evaluate_expectation_batch: {result_tuples}")
                         _, aggregation_result = expectation_spn.evaluate_expectation_batch(expectation,
                                                                                            technical_group_by_scopes,
                                                                                            result_tuples)
@@ -942,7 +948,7 @@ class SPNEnsemble:
                         build_confidence_interval(result_values[i][-1], confidence_interval_stds[i]))
                 return confidence_values, result_tuples
 
-            return None, result_tuples
+            return None, result_tuples, prot_card_end_t - prot_card_start_t, exp_end_t - exp_start_t
 
         # if no group by queries return single value
         if confidence_intervals:
@@ -951,7 +957,7 @@ class SPNEnsemble:
         if return_expectation:
             return None, result_values, expectation_spn, expectation
 
-        return None, result_values
+        return None, result_values, prot_card_end_t - prot_card_start_t, exp_end_t - exp_start_t
 
     def cardinality(self, query, rdc_spn_selection=False, pairwise_rdc_path=None,
                     dry_run=False, merge_indicator_exp=True, max_variants=10, exploit_overlapping=False,
@@ -973,6 +979,9 @@ class SPNEnsemble:
                 rdc_attribute_dict = pickle.load(handle)
 
         possible_starts = self._possible_first_spns(query)
+        # print(f"cardinality possible_starts: {possible_starts}")
+        print(f"len(possible_starts): {len(possible_starts)}")
+        print(f"max_variants: {max_variants}")
         # no where conditions given
         if len(possible_starts) == 0 or max_variants == 1:
             return self._cardinality_greedy(query, rdc_spn_selection=rdc_spn_selection,
@@ -1001,6 +1010,7 @@ class SPNEnsemble:
 
         # it does not make sense to sort by cardinality if they are not yet computed
         results.sort(key=lambda x: x[2])
+        print(f"cardinality possible results: {results}")
         return results[int(len(results) / 2)]
 
     def _cardinality_with_injected_start(self, query, first_spn, next_mergeable_relationships, next_mergeable_tables,
