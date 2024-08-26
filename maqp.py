@@ -13,7 +13,7 @@ from ensemble_compilation.spn_ensemble import read_ensemble
 from ensemble_creation.naive import create_naive_all_split_ensemble, naive_every_relationship_ensemble
 from ensemble_creation.rdc_based import candidate_evaluation
 from evaluation.confidence_interval_evaluation import evaluate_confidence_intervals
-from schemas.flights.schema import gen_flights_1B_schema
+from schemas.flights.schema import gen_flights_1B_schema, gen_flights_50k_schema, gen_flights_10M_schema
 from schemas.imdb.schema import gen_job_light_imdb_schema
 from schemas.ssb.schema import gen_500gb_ssb_schema, gen_10gb_ssb_schema, gen_5gb_ssb_schema
 from schemas.tpc_ds.schema import gen_1t_tpc_ds_schema
@@ -123,6 +123,10 @@ if __name__ == '__main__':
         schema = gen_5gb_ssb_schema(table_csv_path)
     elif args.dataset == 'flights1B':
         schema = gen_flights_1B_schema(table_csv_path)
+    elif args.dataset == 'flights_default':
+        schema = gen_flights_50k_schema(table_csv_path)
+    elif args.dataset == 'flights10M':
+        schema = gen_flights_10M_schema(table_csv_path)
     elif args.dataset == 'tpc-ds-1t':
         schema = gen_1t_tpc_ds_schema(table_csv_path)
     else:
@@ -232,7 +236,7 @@ if __name__ == '__main__':
                              max_variants=args.max_variants,
                              merge_indicator_exp=args.merge_indicator_exp,
                              exploit_overlapping=args.exploit_overlapping, min_sample_ratio=0, debug=True,
-                             show_confidence_intervals=args.confidence_intervals)
+                             show_confidence_intervals=args.confidence_intervals, dataset=args.dataset)
 
     # Read pre-trained ensemble and evaluate the confidence intervals
     if args.evaluate_confidence_intervals:

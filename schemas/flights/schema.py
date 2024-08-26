@@ -33,7 +33,7 @@ def gen_flights_10M_schema(csv_path):
                            attributes=['year_date', 'unique_carrier', 'origin', 'origin_state_abr', 'dest',
                                        'dest_state_abr', 'dep_delay', 'taxi_out', 'taxi_in', 'arr_delay', 'air_time',
                                        'distance'],
-                           csv_file_location=csv_path.format('dataset_sampled'),
+                           csv_file_location=csv_path.format('dataset_sampled'), # 'dataset_sampled'
                            table_size=10000000, primary_key=['f_flightno'], sample_rate=0.1,
                            fd_list=[('origin', 'origin_state_abr'), ('dest', 'dest_state_abr')]
                            ))
@@ -47,5 +47,14 @@ def gen_flights_5M_schema(csv_path):
     schema.table_dictionary['flights'].sample_rate = 1
     schema.table_dictionary['flights'].table_size = 5000000
     schema.table_dictionary['flights'].csv_file_location = csv_path.format('orig_sample')
+
+    return schema
+
+def gen_flights_50k_schema(csv_path):
+    schema = gen_flights_10M_schema(csv_path)
+
+    schema.table_dictionary['flights'].sample_rate = 10
+    schema.table_dictionary['flights'].table_size = 500000
+    schema.table_dictionary['flights'].csv_file_location = csv_path.format('flights_default_no_header')
 
     return schema

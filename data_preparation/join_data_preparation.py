@@ -251,6 +251,8 @@ class JoinDataPreparator:
         sample_size_estimate, full_join_size = self._size_estimate(single_table=single_table,
                                                                    relationship_list=relationship_list,
                                                                    min_start_table_size=min_start_table_size)
+        
+        print(f"sample_size_estimate: {sample_size_estimate}")
         # Sampling of join necessary
         if sample_size_estimate > sample_size:
             sample_rate = min(sample_size / sample_size_estimate * post_sampling_factor, 1.0)

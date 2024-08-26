@@ -742,19 +742,24 @@ class SPNEnsemble:
             group_by_start_t = perf_counter()
             # tuples that should appear in the group by clause
             group_bys_scopes, result_tuples, result_tuples_translated = self._evaluate_group_by_spn_ensembles(query)
+            # print(f"result_tuples_translated : {result_tuples_translated}\n")
             group_by_end_t = perf_counter()
             technical_group_by_scopes = [tuple(group_bys_scope.split('.', 1)) for group_bys_scope in group_bys_scopes]
             if debug:
                 logger.debug(f"\t\tcomputed {len(result_tuples)} group by statements "
                              f"in {group_by_end_t - group_by_start_t} secs.")
 
-        print(f"query.query_type == QueryType.CARDINALITY or any([aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT for _, aggregation_type, _ in query.aggregation_operations]): {query.query_type == QueryType.CARDINALITY or any([aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT for _, aggregation_type, _ in query.aggregation_operations])}")
+        # print(f"query.query_type == QueryType.CARDINALITY or any([aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT for _, aggregation_type, _ in query.aggregation_operations]): {query.query_type == QueryType.CARDINALITY or any([aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT for _, aggregation_type, _ in query.aggregation_operations])}")
         # if cardinality query simply return it
+        card_time_sec = None
+        exp_time_sec = None
         if query.query_type == QueryType.CARDINALITY or any(
                 [aggregation_type == AggregationType.SUM or aggregation_type == AggregationType.COUNT
                  for _, aggregation_type, _ in query.aggregation_operations]):
-
+            
+            card_start_t = perf_counter()
             prot_card_start_t = perf_counter()
+            
 
             # First get the prototypical factors for concrete group by tuple
             prototype_query = copy.deepcopy(query)
@@ -832,6 +837,9 @@ class SPNEnsemble:
             #     bernoulli_p = cardinalities / full_join_size
             #     bernoulli_stds = full_join_size * np.sqrt(bernoulli_p * (1 - bernoulli_p) / 10000000)
             #     cardinality_stds = np.clip(cardinality_stds, bernoulli_stds, np.inf)
+            
+            card_end_t = perf_counter()
+            card_time_sec = (card_end_t - card_start_t)
 
         def build_confidence_interval(prediction, confidence_interval_std):
 
@@ -847,10 +855,10 @@ class SPNEnsemble:
             return None, cardinalities
 
         result_values = None
+        exp_start_t = perf_counter()
+        confidence_time_sec = 0
         if all_operations_of_type(AggregationType.SUM, query) or all_operations_of_type(AggregationType.AVG, query):
-
             operation = None
-
             if confidence_intervals:
                 if result_tuples is not None:
                     avg_exps = np.zeros((len(result_tuples), 1))
@@ -869,11 +877,11 @@ class SPNEnsemble:
                 elif aggregation_operation_type == AggregationOperationType.AGGREGATION:
 
                     # Either sum or avg value. In both cases expectation is required.
-                    exp_start_t = perf_counter()
+                    group_exp_start_t = perf_counter()
                     # todo. incorporate rdc values
                     expectation_spn, expectation = self._greedily_select_expectation_spn(query, factors)
-                    print(f"expectation_spn: {expectation_spn}")
-                    print(f"expectation: {expectation}")
+                    # print(f"expectation_spn: {expectation_spn}")
+                    # print(f"expectation: {expectation}")
                     if confidence_intervals:
                         current_stds, aggregation_result = expectation_spn.evaluate_expectation_batch(
                             expectation,
@@ -883,13 +891,14 @@ class SPNEnsemble:
                         avg_stds = np.sqrt(np.square(avg_stds) + np.square(current_stds))
 
                     else:
-                        print(f"result_tuples before evaluate_expectation_batch: {result_tuples}")
+                        # print(f"result_tuples before evaluate_expectation_batch: {result_tuples}")
                         _, aggregation_result = expectation_spn.evaluate_expectation_batch(expectation,
                                                                                            technical_group_by_scopes,
                                                                                            result_tuples)
-                    exp_end_t = perf_counter()
+                    group_exp_end_t = perf_counter()
+                
                     if debug:
-                        logger.debug(f"\t\tcomputed expectation in {exp_end_t - exp_start_t} secs.")
+                        logger.debug(f"\t\tcomputed expectation in {group_exp_end_t - group_exp_start_t} secs.")
 
                     logger.debug(
                         f"\t\taverage expectation: {np.array([aggregation_result]).mean()} for {expectation.features}")
@@ -911,15 +920,21 @@ class SPNEnsemble:
                         raise NotImplementedError
 
             if all_operations_of_type(AggregationType.SUM, query):
+                confidence_time_start = perf_counter()
                 if confidence_intervals:
                     confidence_interval_stds = std_of_products(
                         np.concatenate((avg_exps, np.reshape(cardinalities, cardinality_stds.shape)), axis=1),
                         np.concatenate((avg_stds, cardinality_stds), axis=1))
-
+                    
+                confidence_time_sec += perf_counter() - confidence_time_start
+                
                 result_values *= cardinalities
             elif confidence_intervals:
+                confidence_time_start = perf_counter()
                 confidence_interval_stds = avg_stds
-
+                confidence_time_sec += perf_counter() - confidence_time_start
+            
+            
         # single count
         elif all_operations_of_type(AggregationType.COUNT, query):
             no_count_ops = len([aggregation_type for aggregation_operation_type, aggregation_type, _ in
@@ -934,12 +949,13 @@ class SPNEnsemble:
         # mixed operations
         else:
             raise NotImplementedError("Mixed operations are currently not implemented.")
-
+    
         # concatenate group by attribute and value if there is a group by
         if len(query.group_bys) > 0:
             result_tuples = [result_tuple + (result_values[i].item(),) for i, result_tuple in
                              enumerate(result_tuples_translated)]
-
+            exp_end_t = perf_counter()
+            exp_time_sec = (exp_end_t - exp_start_t) - confidence_time_sec
             if confidence_intervals:
                 confidence_values = []
 
@@ -947,9 +963,11 @@ class SPNEnsemble:
                     confidence_values.append(
                         build_confidence_interval(result_values[i][-1], confidence_interval_stds[i]))
                 return confidence_values, result_tuples
+            
+            return None, result_tuples, card_time_sec, exp_time_sec
 
-            return None, result_tuples, prot_card_end_t - prot_card_start_t, exp_end_t - exp_start_t
-
+        exp_end_t = perf_counter()
+        exp_time_sec = (exp_end_t - exp_start_t) - confidence_time_sec
         # if no group by queries return single value
         if confidence_intervals:
             return build_confidence_interval(result_values, confidence_interval_stds), result_values
@@ -957,7 +975,8 @@ class SPNEnsemble:
         if return_expectation:
             return None, result_values, expectation_spn, expectation
 
-        return None, result_values, prot_card_end_t - prot_card_start_t, exp_end_t - exp_start_t
+       
+        return None, result_values, card_time_sec, exp_time_sec
 
     def cardinality(self, query, rdc_spn_selection=False, pairwise_rdc_path=None,
                     dry_run=False, merge_indicator_exp=True, max_variants=10, exploit_overlapping=False,
@@ -980,8 +999,8 @@ class SPNEnsemble:
 
         possible_starts = self._possible_first_spns(query)
         # print(f"cardinality possible_starts: {possible_starts}")
-        print(f"len(possible_starts): {len(possible_starts)}")
-        print(f"max_variants: {max_variants}")
+        # print(f"len(possible_starts): {len(possible_starts)}")
+        # print(f"max_variants: {max_variants}")
         # no where conditions given
         if len(possible_starts) == 0 or max_variants == 1:
             return self._cardinality_greedy(query, rdc_spn_selection=rdc_spn_selection,
@@ -1010,7 +1029,7 @@ class SPNEnsemble:
 
         # it does not make sense to sort by cardinality if they are not yet computed
         results.sort(key=lambda x: x[2])
-        print(f"cardinality possible results: {results}")
+        # print(f"cardinality possible results: {results}")
         return results[int(len(results) / 2)]
 
     def _cardinality_with_injected_start(self, query, first_spn, next_mergeable_relationships, next_mergeable_tables,

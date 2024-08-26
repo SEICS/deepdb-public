@@ -143,7 +143,7 @@ def prepare_single_table(schema_graph, table, path, max_distinct_vals=10000, csv
     for rel_attribute in relevant_attributes:
 
         attribute = table + '.' + rel_attribute
-
+        print(f"table_data.dtypes[{attribute}]: {table_data.dtypes[attribute]}\n")
         # categorical value
         if table_data.dtypes[attribute] == object:
 

@@ -1,0 +1,13 @@
+approach,query_no,run_latency_ms,inference_latency_ms,average_relative_error,q_error,bin_completeness,total_bins,query,sample_percentage
+ApproachType.MODEL_BASED,0,3.825,3.818,0.032,,100,1,SELECT AVG(dep_delay) FROM flights WHERE origin='ATL';,100
+ApproachType.MODEL_BASED,1,2.309,2.302,0.406,,100,1,SELECT AVG(distance) FROM flights WHERE unique_carrier='TW';,100
+ApproachType.MODEL_BASED,2,2.99,1.711,89.083,,100.0,26,"SELECT unique_carrier, COUNT(*) FROM flights WHERE origin_state_abr='LA' GROUP BY unique_carrier;",100
+ApproachType.MODEL_BASED,3,12.043,2.588,81.743,,100.0,23,"SELECT unique_carrier, COUNT(*) FROM flights WHERE origin_state_abr='LA' AND  dest_state_abr='CA' GROUP BY unique_carrier;",100
+ApproachType.MODEL_BASED,4,4.375,2.393,56.893,,100.0,21,"SELECT year_date, COUNT(*) FROM flights WHERE origin_state_abr='LA' AND dest='JFK' GROUP BY year_date;",100
+ApproachType.MODEL_BASED,5,11.379,9.82,89.945,,100.0,22,"SELECT year_date, SUM(distance) FROM flights WHERE unique_carrier='9E' GROUP BY year_date;",100
+ApproachType.MODEL_BASED,6,15.56,12.686,70.409,,100.0,47,"SELECT origin_state_abr, SUM(air_time) FROM flights WHERE dest='HPN' GROUP BY origin_state_abr;",100
+ApproachType.MODEL_BASED,7,14.642,12.804,0.358,,100.0,24,"SELECT unique_carrier, AVG(dep_delay) FROM flights WHERE year_date=2005 AND origin='PHX' GROUP BY unique_carrier;",100
+ApproachType.MODEL_BASED,8,275.524,23.351,88.28,,100.0,51,"SELECT dest_state_abr, COUNT(*) FROM flights WHERE distance>2500 GROUP BY dest_state_abr;",100
+ApproachType.MODEL_BASED,9,437.891,37.081,78.192,,100.0,24,"SELECT unique_carrier, COUNT(*) FROM flights WHERE air_time>1000 AND dep_delay>1500 GROUP BY unique_carrier;",100
+ApproachType.MODEL_BASED,10,29.264,20.748,89.4,,100.0,22,"SELECT year_date, SUM(arr_delay*dep_delay) FROM flights WHERE origin_state_abr = 'CA' AND dest_state_abr = 'HI' GROUP BY year_date;",100
+ApproachType.MODEL_BASED,11,12.987,10.065,90.481,,100.0,51,"SELECT dest_state_abr, SUM(taxi_out)-SUM(taxi_in) FROM flights WHERE unique_carrier = 'UA' AND origin = 'ATL' GROUP BY dest_state_abr;",100

@@ -6,6 +6,7 @@ from time import perf_counter
 import numpy as np
 
 import math
+from ensemble_compilation.graph_representation import QueryType
 
 from ensemble_compilation.physical_db import DBConnection
 from ensemble_compilation.spn_ensemble import read_ensemble
@@ -91,7 +92,7 @@ def compute_relative_error(true, predicted, debug=False):
 def evaluate_aqp_queries(ensemble_location, query_filename, target_path, schema, ground_truth_path,
                          rdc_spn_selection, pairwise_rdc_path, max_variants=5, merge_indicator_exp=False,
                          exploit_overlapping=False, min_sample_ratio=0, debug=False,
-                         show_confidence_intervals=True):
+                         show_confidence_intervals=True, dataset=""):
     """
     Loads ensemble and computes metrics for AQP query evaluation
     :param ensemble_location:
@@ -114,38 +115,57 @@ def evaluate_aqp_queries(ensemble_location, query_filename, target_path, schema,
     # read ground truth
     with open(ground_truth_path, 'rb') as handle:
         ground_truth = pickle.load(handle)
-
+    
     for query_no, query_str in enumerate(queries):
         query_str = query_str.strip()
-        logger.info(f"Evaluating AQP query {query_no}: {query_str}")
         query = parse_query(query_str.strip(), schema)
-        run_latency = []
-        infer_time = []
-        if query_no not in [4,8,9,10]: # those skipped queries has query parsing issue of "non or multi columns got matching"
-            for j in range(6):
+        run_latencies = []
+        inference_latencies = []
+        if dataset == "ssb-5gb":
+            ssb_skip = [1,2,4,8,9,10,11] # if q1 does group by, it timed out
+        else: 
+            ssb_skip = []
+        if query_no not in ssb_skip: # those skipped queries has query parsing issue of "non or multi columns got matching"
+            # ssb q12 time out: zsh killed
+            logger.info(f"Evaluating AQP query {query_no}: {query_str}\n")
+            for j in range(8):
                 aqp_start_t = perf_counter()
+                # card_time, exp_time
                 confidence_intervals, aqp_result, card_time, exp_time = spn_ensemble.evaluate_query(query, rdc_spn_selection=rdc_spn_selection,
-                                                                            pairwise_rdc_path=pairwise_rdc_path,
-                                                                            merge_indicator_exp=merge_indicator_exp,
-                                                                            max_variants=max_variants,
-                                                                            exploit_overlapping=exploit_overlapping,
-                                                                            debug=debug,
-                                                                            confidence_intervals=show_confidence_intervals)
+                                                                        pairwise_rdc_path=pairwise_rdc_path,
+                                                                        merge_indicator_exp=merge_indicator_exp,
+                                                                        max_variants=max_variants,
+                                                                        exploit_overlapping=exploit_overlapping,
+                                                                        debug=debug,
+                                                                        confidence_intervals=show_confidence_intervals)
+                
                 aqp_end_t = perf_counter()
-                latency = aqp_end_t - aqp_start_t
-                if j != 0:
-                    run_latency.append(latency)
-                    infer_time.append(card_time + exp_time)
+                run_latency = aqp_end_t - aqp_start_t
+                if card_time is None:
+                    card_time = 0
                     
-            lat = np.mean(run_latency) * 1000
-            inference_time = np.mean(infer_time) * 1000
-            logger.info(f"\t\t{'total run_time:':<32}{lat} ms")
-            logger.info(f"\t\t{'inference_time:':<32}{inference_time} ms")
-
+                if exp_time is None:
+                    exp_time = 0
+                inference_latency = card_time + exp_time
+                if j > 2: # warmup 3 runs
+                    run_latencies.append(run_latency)
+                    inference_latencies.append(inference_latency)
+                    # infer_time.append(card_time) # card_time + exp_time
+            if j>1:
+                run_lat = np.mean(run_latencies) * 1000
+                infer_lat = np.mean(inference_latencies) * 1000
+            else:
+                run_lat = run_latencies * 1000
+                infer_lat = inference_latencies * 1000
+            # inference_time = np.mean(infer_time) * 1000
+            logger.info(f"\t\t{'total run_time:':<32}{run_lat} ms")
+            logger.info(f"\t\t{'inference_time:':<32}{infer_lat} ms")
+            # print(f"aqp_result: {aqp_result}")
+            
+            q_error = None
             if ground_truth is not None:
                 true_result = ground_truth[query_no]
                 if isinstance(aqp_result, list):
-
                     average_relative_error, bin_completeness, false_bin_percentage, total_bins, \
                     confidence_interval_precision, confidence_interval_length, _ = \
                         evaluate_group_by(aqp_result, true_result, confidence_intervals)
@@ -160,7 +180,6 @@ def evaluate_aqp_queries(ensemble_location, query_filename, target_path, schema,
                         logger.info(f"\t\t{'confidence_interval_length: ':<32}{confidence_interval_length * 100:>.2f}%")
 
                 else:
-
                     true_result = true_result[0][0]
                     predicted_value = aqp_result
 
@@ -180,31 +199,44 @@ def evaluate_aqp_queries(ensemble_location, query_filename, target_path, schema,
                     total_bins = 1
                     bin_completeness = 1
                     average_relative_error = relative_error
+                    if query.query_type == QueryType.CARDINALITY:
+                        if predicted_value == 0 and true_result == 0:
+                            q_error = 1.0
+                        elif np.isnan(predicted_value) or predicted_value == 0:
+                            predicted_value = 1
+                            q_error = max(predicted_value / true_result, true_result / predicted_value)
+                        elif true_result == 0:
+                            true_result = 1
+                            q_error = max(predicted_value / true_result, true_result / predicted_value)
+                        else:
+                            q_error = max(predicted_value / true_result, true_result / predicted_value)
                 csv_rows.append({'approach': ApproachType.MODEL_BASED,
                                 'query_no': query_no,
-                                'run_latency_ms': lat,
-                                'inference_time_ms': inference_time,
-                                'average_relative_error': average_relative_error * 100,
+                                'run_latency_ms': round(run_lat,3),
+                                'inference_latency_ms': round(infer_lat,3),
+                                'average_relative_error': round(average_relative_error * 100,3),
+                                'q_error': q_error,
                                 'bin_completeness': bin_completeness * 100,
                                 'total_bins': total_bins,
                                 'query': query_str,
                                 'sample_percentage': 100
-                                })
+                                }) # 'inference_time_ms': inference_time,
             else:
                 logger.info(f"\t\tpredicted: {aqp_result}")
 
-        else:
-            csv_rows.append({'approach': ApproachType.MODEL_BASED,
-                            'query_no': query_no,
-                            'run_latency_ms': None,
-                            'inference_time_ms': None,
-                            'average_relative_error': None,
-                            'bin_completeness': None,
-                            'total_bins': None,
-                            'query': query_str,
-                            'sample_percentage': None
-                            })
-    save_csv(csv_rows, target_path)
+            # else:
+            #     csv_rows.append({'approach': ApproachType.MODEL_BASED,
+            #                     'query_no': query_no,
+            #                     'run_latency_ms': None,
+            #                     'inference_latency_ms': None,
+            #                     'average_relative_error': None,
+            #                     'q_error': None,
+            #                     'bin_completeness': None,
+            #                     'total_bins': None,
+            #                     'query': query_str,
+            #                     'sample_percentage': None
+            #                     }) # 'inference_time_ms': None,
+            save_csv(csv_rows, target_path)
 
 def evaluate_confidence_interval(confidence_interval, true_result, predicted):
     in_interval = 0
