@@ -122,7 +122,7 @@ def evaluate_aqp_queries(ensemble_location, query_filename, target_path, schema,
         run_latencies = []
         inference_latencies = []
         if dataset == "ssb-5gb":
-            ssb_skip = [1,2,4,8,9,10,11] # if q1 does group by, it timed out
+            ssb_skip = [] # 1,2,4,9,8,10,11,12 # if q1 does group by, it timed out
         else: 
             ssb_skip = []
         if query_no not in ssb_skip: # those skipped queries has query parsing issue of "non or multi columns got matching"

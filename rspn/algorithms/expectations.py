@@ -158,11 +158,11 @@ def expectation_recursive(node, feature_scope, inverted_features, relevant_scope
         return weighted_sum / weights_normalizer
 
     else:
-        print(f"feature_scope: {feature_scope}")
-        print(f"node.scope: {node.scope}")
+        # print(f"feature_scope: {feature_scope}")
+        # print(f"node.scope: {node.scope}")
         if node.scope[0] in feature_scope:
             t_node = type(node)
-            print(f"node_expectation: {node_expectation}")
+            # print(f"node_expectation: {node_expectation}")
             if t_node in node_expectation:
 
                 feature_idx = feature_scope.index(node.scope[0])

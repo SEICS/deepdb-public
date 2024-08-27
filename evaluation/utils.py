@@ -24,9 +24,12 @@ def _extract_identifiers(tokens, enforce_single=True):
 # Find corresponding table of attribute
 def _find_matching_table(attribute, schema, alias_dict):
     table_name = None
+    # print(f"alias_dict: {alias_dict}")
+    # print(f"schema.tables; {[t.table_name for t in schema.tables]}")
     for table_obj in schema.tables:
         if table_obj.table_name not in alias_dict.keys():
             continue
+        # print(f"{table_obj.table_name}.attributes: {table_obj.attributes}")
         if attribute in table_obj.attributes:
             table_name = table_obj.table_name
 
@@ -189,7 +192,9 @@ def parse_query(query_str, schema):
     for table, alias in tables:
         query.table_set.add(table)
         alias_dict[alias] = table
-
+    
+    # print(f"query_str: {query_str}")
+    # print(f"alias_dict: {alias_dict}")
     # If there is a group by clause, parse it
     if group_by_attributes is not None:
 
